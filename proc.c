@@ -6,10 +6,13 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "queue.h"
+
 
 struct {
   struct spinlock lock;
   struct proc proc[NPROC];
+  struct Queue* queue[3];
 } ptable;
 
 static struct proc *initproc;
@@ -20,10 +23,23 @@ extern void trapret(void);
 
 static void wakeup1(void *chan);
 
+
+void
+addproc(int priority, struct proc *newp){
+  if(priority > NUMQUEUES){
+    printf("Warning: Priority value exceeded the established limit (3)");
+    return ;
+  }
+  enQueue(ptable.queue[priority], newp);
+}
+
 void
 pinit(void)
 {
   initlock(&ptable.lock, "ptable");
+  for(int i = 0; i < NUMQUEUES; i++){
+    ptable.queue[i] = createQueue();
+  }
 }
 
 // Must be called with interrupts disabled
@@ -89,6 +105,14 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
 
+  p->ctime = 0; 
+  p->stime = 0;     
+  p->retime = 0;    
+  p->rutime = 0;
+
+  p->priority = DEFAULTPRIORITY;
+  p->age = 0;
+
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -111,6 +135,8 @@ found:
   p->context = (struct context*)sp;
   memset(p->context, 0, sizeof *p->context);
   p->context->eip = (uint)forkret;
+
+  addproc(DEFAULTPRIORITY, p);
 
   return p;
 }
@@ -332,24 +358,34 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
 
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-      p->ticks_counter = 0;
+    for(int i = 0; i < NUMQUEUES; i++){
+      while(isempty(ptable.queue[i]) == 0){
 
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
+        p = getfirst(ptable.queue[i]);
 
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+        if(p->state != RUNNABLE)
+          continue;
+
+        deQueue(ptable.queue[i]);
+
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+        // before jumping back to us.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+
+        // TODO: *** verify that resetting the ticks here does not cause any conflicts ***
+        myproc()->ticks_counter = 0;
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+      }
     }
     release(&ptable.lock);
 
@@ -532,4 +568,35 @@ procdump(void)
     }
     cprintf("\n");
   }
+}
+
+void
+update_count_procs(void)
+{
+  struct proc *p;
+  acquire(&ptable.lock);
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    
+    switch (p->state)
+    {
+      case RUNNING:
+        p->rutime++;
+        p->ticks_counter++;
+        break;
+
+      case RUNNABLE:
+        p->retime++;
+        break;
+
+      case SLEEPING:
+        p->stime++;
+        break;
+
+      default:
+        break;
+    }
+  }
+
+  release(&ptable.lock);
 }
