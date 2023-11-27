@@ -32,6 +32,10 @@ struct context {
   uint eip;
 };
 
+
+void update_count_procs(void);
+
+
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -52,13 +56,13 @@ struct proc {
 
   int ticks_counter;           // Number of ticks after process began
 
+  int priority;
+  uint age;
+
   uint ctime;                  // Tempo quando o processo foi criado
   int stime;                   // Tempo SLEEPING
   int retime;                  // Tempo READY(RUNNABLE) time
   int rutime;                  // Tempo executando (RUNNING)
-
-  int priority;
-  uint age;
 };
 
 // Process memory is laid out contiguously, low addresses first:

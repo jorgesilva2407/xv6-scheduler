@@ -120,6 +120,9 @@ void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
 void            yield(void);
+int             wait2(int*, int*, int*);
+int             change_prio(int);
+void            update_count_procs(void);
 
 // swtch.S
 void            swtch(struct context**, struct context*);
@@ -162,6 +165,7 @@ void            timerinit(void);
 // trap.c
 void            idtinit(void);
 extern uint     ticks;
+extern uint     proctimer;
 void            tvinit(void);
 extern struct spinlock tickslock;
 

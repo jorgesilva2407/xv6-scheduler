@@ -13,7 +13,10 @@
 #define FSSIZE       1000  // size of file system in blocks
 
 #define INTERV 5
+#define LOWPRIORITY 1
 #define DEFAULTPRIORITY 2
+#define HIGHPRIORITY 3
 #define NUMQUEUES 3
+#define NUMPROCSTYPES 3
 #define _1TO2 200
 #define _2TO3 100
