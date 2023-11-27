@@ -23,17 +23,26 @@ struct IntCharMap myMap[MAP_SIZE] = {
 
 void
 cpu_bound(){
-    for(int i = 0; i < 100; i++)
-        for(int j = 0; j < 1000000; j++);
+    for(int i = 0; i < 100; i++){
+		for(int j = 0; j < 1000000; j++){
+			asm("nop");
+		}
+	}
+        
 }
 
 void
 s_cpu(){
     
     for(int i = 0; i < 100; i++){
+		asm("nop");
         for(int j = 0; j < 1000000; j++){
+			double x = i * j;
+			x = x;
+			if (j % 10000 == 0)
+				yield();
         }
-        yield();
+        
     }
 
 }
@@ -47,14 +56,16 @@ io_bound(){
 
 void
 print_top() {
-    printf(0,  "PID   |   Process Type   |   Ready(time)   |   Running(time)   |   Sleeping(time)\n");
-    printf(0,  "------|------------------|-----------------|-------------------|---------------------\n");
+    printf(0,  "PID   |   Process Type   |   Waiting(time)   |   Running(time)   |   Sleeping(time)   |   TurnAround(time)\n");
+    printf(0,  "------|------------------|-------------------|-------------------|--------------------|---------------------\n");
 }
 
 void
-print_process(int (*procs)[5], int max){
-    for(int i = 0; i < max; i++)
-        printf(0,  "%d | %s | %d | %d | %d\n", procs[i][0], myMap[procs[i][1]].value, procs[i][2], procs[i][3], procs[i][4]);
+print_process(int N, int param, int procs[N][param]){
+	for(int i = 0; i < N; i ++){
+		printf(0,  "%d | %s | %d | %d | %d | %d\n", procs[i][0], myMap[procs[i][0]%NUMQUEUES].value, procs[i][2], procs[i][3], procs[i][4]);
+	}
+    	
 }
 
 void
@@ -66,15 +77,15 @@ print_floor(int width) {
 }
 
 void
-calc_means(int (*procs)[5], int (*means)[3], int max){
+calc_means(int N, int procs[N][5], int means[3][3]){
     int mod;
-    for(int i = 0; i < max; i++){
+    for(int i = 0; i < N; i++){
         mod = i%NUMPROCSTYPES;
-        means[mod][0] += procs[i][4];
+        means[mod][0] += procs[i][1];
         means[mod][1] += procs[i][2];
-        means[mod][2] += procs[i][2] + procs[i][3] + procs[i][4];
+        means[mod][2] += procs[i][3];
     }
-    float div = (max/NUMPROCSTYPES);
+    int div = (N/NUMPROCSTYPES);
     for(int i = 0; i < NUMPROCSTYPES; i++){
         means[i][0] /= div;
         means[i][1] /= div;
@@ -83,30 +94,50 @@ calc_means(int (*procs)[5], int (*means)[3], int max){
 }
 
 void
-initialize(int matrix[3][3]){
-    for (int i = 0; i < 3; i++) {
-        for (int j = 0; j < 3; j++) {
-            matrix[i][j] = 0.0;
+initialize(int rows, int cols, int matrix[rows][cols]) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            matrix[i][j] = 0;
         }
     }
 }
 
 void
-print_means(int (*procs)[5], int max) {
-    int means[3][3];
-    initialize(means);
-    calc_means(procs, means, max);
-    for(int i = 0; i < 3; i++){
-        printf(0,  "%s:\n", myMap[i].value); 
-        printf(0,  "Sleeping(mean) = %d Ready(mean) = %d Turnaround(mean) = %d\n", means[i][0], means[i][1], means[i][2]);
-    }
+print_means(int means[3][3]) {
+    
+    printf(1, "\n\nCPU bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[0][0], means[0][1], means[0][2], means[0][0] + means[0][1] + means[0][2]);
+	printf(1, "CPU-S bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[1][0], means[1][1], means[1][2], means[1][0] + means[1][1] + means[1][2]);
+	printf(1, "I/O bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[2][0], means[2][1], means[2][2], means[2][0] + means[2][1] + means[2][2]);
 }
 
-void print_result(int (*procs)[5], int max){
-    print_top();
-    print_process(procs, max);
-    print_floor(60);
-    print_means(procs, max);
+void
+get_procs(int N, int param, int procs[N][param]){
+	for (int i = 0; i < N; i++) {
+        int retime, rutime, stime;
+		int pid = wait2(&retime, &rutime, &stime);
+		procs[i][0] = pid;
+		procs[i][1] = retime;
+		procs[i][2] = rutime;
+		procs[i][3] = stime;
+		procs[i][4] = retime + rutime + stime;
+	}
+}
+
+void print_results(int n){
+	int N = n * NUMPROCSTYPES;
+
+	int means[NUMPROCSTYPES][NUMPROCSTYPES];
+	initialize(NUMPROCSTYPES, NUMPROCSTYPES, means);
+
+	int procs[N][5];
+	get_procs(N, 5, procs);
+	print_top();
+	print_process(N, 5, procs);
+	print_floor(110);
+
+	calc_means(N, procs, means);
+	print_means(means);
+
 }
 void
 set_procs(int (*procs)[5], int data[5], int line) {
@@ -136,42 +167,35 @@ main(int argc, char *argv[]){
     }
 
     int n = char2int(argv[1]);
-    int procs[NUMPROCSTYPES * n][5];
 
     int pid;
-    int data[5];
     for (int i = 0; i < NUMPROCSTYPES * n; i++){
         pid = fork();
         
         if(pid != 0){
             continue;
         } 
-        data[0] = pid;
-        switch (pid % NUMPROCSTYPES)
+        int cpid = getpid();
+        switch (cpid % NUMPROCSTYPES)
         {
             case CPUBOUND:
                 cpu_bound();
-                data[1] = CPUBOUND;
                 break;
             case SCPU:
                 s_cpu();
-                data[1] = SCPU;
                 break;
             case IOBOUND:
                 io_bound();
-                data[1] = IOBOUND;
                 break;
             default:
                 break;
         }
-        exit();
-
-        int retime, rutime, stime = 0;
-        wait2(&retime, &rutime, &stime);
-        data[2] = retime; data[3] = rutime; data[4] = stime;
-        set_procs(procs, data, i);
+		exit();
+		continue;
     }
+	
 
-    print_result(procs, NUMPROCSTYPES * n);
+	print_results(n);
+    exit();
     exit();
 }
