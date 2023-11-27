@@ -124,7 +124,6 @@ found:
   p->stime = 0;     
   p->retime = 0;    
   p->rutime = 0; 
-
   release(&ptable.lock);
 
   // Allocate kernel stack.
@@ -433,7 +432,6 @@ scheduler(void)
        
         removeproc(0, priority);
 
-        // cprintf("pname: %s pid: %d priority: %d\n", p->name, p->pid, p->priority);
         // Switch to chosen process.  It is the process's job
         // to release ptable.lock and then reacquire it
         // before jumping back to us.

@@ -60,6 +60,7 @@
     "spinlock.h": "c",
     "proc.h": "c",
     "param.h": "c",
-    "x86.h": "c"
+    "x86.h": "c",
+    "types.h": "c"
   }
 }

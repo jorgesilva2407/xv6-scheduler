@@ -63,7 +63,7 @@ print_top() {
 void
 print_process(int N, int param, int procs[N][param]){
 	for(int i = 0; i < N; i ++){
-		printf(0,  "%d | %s | %d | %d | %d | %d\n", procs[i][0], myMap[procs[i][0]%NUMQUEUES].value, procs[i][2], procs[i][3], procs[i][4]);
+		printf(0,  "%d | %s | %d | %d | %d | %d\n", procs[i][0], myMap[procs[i][0]%NUMQUEUES].value, procs[i][1], procs[i][2], procs[i][3], procs[i][4]);
 	}
     	
 }
@@ -105,9 +105,9 @@ initialize(int rows, int cols, int matrix[rows][cols]) {
 void
 print_means(int means[3][3]) {
     
-    printf(1, "\n\nCPU bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[0][0], means[0][1], means[0][2], means[0][0] + means[0][1] + means[0][2]);
-	printf(1, "CPU-S bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[1][0], means[1][1], means[1][2], means[1][0] + means[1][1] + means[1][2]);
-	printf(1, "I/O bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[2][0], means[2][1], means[2][2], means[2][0] + means[2][1] + means[2][2]);
+    printf(1, "\n\nCPU bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[0][0], means[0][1], means[0][2], (means[0][0] + means[0][1] + means[0][2]));
+	printf(1, "CPU-S bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[1][0], means[1][1], means[1][2], (means[1][0] + means[1][1] + means[1][2]));
+	printf(1, "I/O bound:\nAverage ready time: %d\nAverage running time: %d\nAverage sleeping time: %d\nAverage turnaround time: %d\n\n\n", means[2][0], means[2][1], means[2][2], (means[2][0] + means[2][1] + means[2][2]));
 }
 
 void
